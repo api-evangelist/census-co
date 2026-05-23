@@ -1,0 +1,171 @@
+aid: census-co
+name: Census
+description: Census, now operating as Fivetran Activations following its acquisition by Fivetran, is a reverse ETL and data activation platform that turns the data warehouse into the operational source of truth for go-to-market and product teams. The platform configures managed, no-code reverse ETL pipelines that move modeled data from warehouses like Snowflake, BigQuery, Databricks, and Redshift into more than 200 SaaS destinations across CRM, marketing automation, advertising, customer success, product, finance, and productivity tools. Census also offers an Audience Hub for visual segment building, an Embedded product for white-labeling reverse ETL inside customer-facing applications, and a Connect workflow for collecting end-user credentials and programmatically creating sync pipelines. Developers integrate through the Census Management API, Embedded API, Connect Links, custom destination APIs, and a Terraform provider. This profile covers the Census product line and is distinct from the US Census Bureau public APIs.
+type: Index
+position: Provider
+access: 3rd-Party
+image: https://kinlane-productions.s3.amazonaws.com/apis-json/apis-json-logo.jpg
+tags:
+  - Census
+  - Reverse ETL
+  - Data Activation
+  - Embedded
+  - Audience Hub
+  - Connect
+  - Warehouse
+  - Snowflake
+  - BigQuery
+  - Databricks
+  - Salesforce
+  - HubSpot
+  - Marketing
+url: https://raw.githubusercontent.com/api-evangelist/census-co/refs/heads/main/apis.yml
+created: '2026-05-23'
+modified: '2026-05-23'
+specificationVersion: '0.20'
+apis:
+  - aid: census-co:census-management-api
+    name: Census Management API
+    description: REST API for managing reverse ETL syncs, sources, destinations, datasets, models, and segments programmatically. Used to provision, update, and monitor Census workspaces, schedule syncs, and integrate Census into CI/CD or data platform tooling. Following the Fivetran acquisition, the API is documented under Fivetran Activations.
+    humanURL: https://developers.getcensus.com/
+    baseURL: https://app.getcensus.com/api
+    tags:
+      - Management
+      - Syncs
+      - Sources
+      - Destinations
+      - Models
+      - Datasets
+    properties:
+      - type: Documentation
+        url: https://developers.getcensus.com/
+      - type: APIReference
+        url: https://fivetran.com/docs/activations/rest-api
+      - type: Activations
+        url: https://www.getcensus.com/reverse-etl
+      - type: SignUp
+        url: https://www.getcensus.com/
+    features:
+      - name: Sync Management
+        description: Create and configure reverse ETL syncs from warehouse models to SaaS destinations.
+      - name: Source and Destination Management
+        description: Provision data sources like Snowflake and BigQuery and SaaS destinations like Salesforce and HubSpot.
+      - name: Dataset and Model Management
+        description: Manage SQL models and datasets as the basis for syncs and audiences.
+      - name: Observability
+        description: Programmatic access to sync logs, run history, and alerts.
+      - name: Terraform Provider
+        description: Manage Census configuration as code using the official Terraform provider.
+    useCases:
+      - name: Reverse ETL Provisioning
+        description: Provision and manage reverse ETL syncs across many destinations and environments.
+      - name: GitOps for Data Activation
+        description: Define Census configuration in Terraform and ship via pull requests.
+      - name: Operational Analytics
+        description: Push warehouse-derived metrics into CRM and marketing tools where ops teams act.
+    integrations:
+      - name: Snowflake
+      - name: BigQuery
+      - name: Databricks
+      - name: Redshift
+      - name: Postgres
+      - name: Salesforce
+      - name: HubSpot
+      - name: Marketo
+      - name: Iterable
+      - name: Braze
+      - name: Segment
+      - name: Slack
+      - name: Google Ads
+      - name: Facebook Ads
+    authentication:
+      - type: API Key
+        description: Workspace-scoped API key issued from the Census or Fivetran Activations dashboard.
+  - aid: census-co:census-embedded-api
+    name: Census Embedded API
+    description: REST API for embedding reverse ETL inside SaaS products, giving customers more than 200 prebuilt connectors out of the box. Combines Management API operations with Connect Links to streamline credential collection and pipeline creation directly from the host application.
+    humanURL: https://developers.getcensus.com/embedded/overview
+    tags:
+      - Embedded
+      - Reverse ETL
+      - Connect Links
+      - White Label
+    properties:
+      - type: Documentation
+        url: https://developers.getcensus.com/embedded/overview
+      - type: EmbeddedAnnouncement
+        url: https://www.getcensus.com/blog/announcing-census-embedded-reverse-etl
+      - type: CustomDestination
+        url: https://www.getcensus.com/integrations/custom-destination
+    features:
+      - name: Embedded Reverse ETL
+        description: Offer reverse ETL inside your own product without building integrations from scratch.
+      - name: 200+ Prebuilt Connectors
+        description: Ship with destinations across CRM, marketing, advertising, customer success, product, finance, and productivity tools.
+      - name: 25+ Data Source Connectors
+        description: Supports cloud warehouses, data lakes, transactional databases, event streams, and cloud storage as sources.
+      - name: Programmatic Provisioning
+        description: Provision sources, syncs, and destinations on behalf of customer tenants through the API.
+    useCases:
+      - name: Data-Native Platforms
+        description: Add data activation to vertical SaaS or data platforms without rebuilding ETL infrastructure.
+      - name: Customer-Owned Warehouse Activation
+        description: Let end customers connect their own warehouse and push data into their own SaaS tools through your product.
+      - name: White-Labeled Sync UI
+        description: Deliver a branded sync experience that matches the host product.
+    integrations:
+      - name: Snowflake
+      - name: BigQuery
+      - name: Databricks
+      - name: Redshift
+      - name: Salesforce
+      - name: HubSpot
+      - name: Iterable
+      - name: Marketo
+      - name: Braze
+      - name: Custom Destinations
+    authentication:
+      - type: API Key
+        description: API key authentication scoped to the embedded workspace and per-tenant credentials managed through Connect Links.
+  - aid: census-co:census-connect
+    name: Census Connect
+    description: Client-side workflow that streamlines collection of end-user credentials and programmatically creates reverse ETL pipelines, in combination with the Census Management API.
+    humanURL: https://developers.getcensus.com/
+    tags:
+      - Connect Links
+      - Credentials
+      - Embedded
+      - Onboarding
+    properties:
+      - type: Documentation
+        url: https://developers.getcensus.com/
+      - type: EmbeddedAnnouncement
+        url: https://www.getcensus.com/blog/announcing-census-embedded-reverse-etl
+    features:
+      - name: Connect Links
+        description: Generate hosted links that let end customers authenticate their data sources and destinations.
+      - name: Programmatic Pipeline Creation
+        description: After credentials are captured, create reverse ETL pipelines through the Management API automatically.
+    useCases:
+      - name: Self-Serve Customer Onboarding
+        description: Let customers connect their own SaaS tools without engineering involvement.
+      - name: Partner-Led Activation
+        description: Enable agencies and partners to spin up syncs on behalf of clients.
+    integrations:
+      - name: Census Management API
+      - name: Census Embedded API
+    authentication:
+      - type: API Key
+        description: API key used by the host application to mint and manage Connect Links.
+common:
+  - type: Website
+    url: https://www.getcensus.com/
+  - type: Documentation
+    url: https://developers.getcensus.com/
+  - type: Activations
+    url: https://fivetran.com/docs/activations
+  - type: SignUp
+    url: https://www.getcensus.com/
+maintainers:
+  - FN: Kin Lane
+    email: kin@apievangelist.com
