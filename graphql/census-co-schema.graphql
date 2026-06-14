@@ -1,0 +1,889 @@
+"""
+Census (Fivetran Activations) GraphQL Schema
+Reverse ETL and data activation platform.
+Source: https://developers.getcensus.com/ / https://fivetran.com/docs/activations/rest-api
+"""
+
+# ─── Scalars ───────────────────────────────────────────────────────────────────
+
+scalar DateTime
+scalar JSON
+
+# ─── Enums ─────────────────────────────────────────────────────────────────────
+
+"""Lifecycle status of a Sync."""
+enum SyncStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+  FAILED
+  DRAFT
+}
+
+"""Trigger type for a Sync."""
+enum SyncType {
+  SCHEDULED
+  TRIGGERED
+  MANUAL
+  CONTINUOUS
+}
+
+"""Status of a single SyncRun execution."""
+enum SyncRunStatus {
+  COMPLETED
+  FAILED
+  RUNNING
+  QUEUED
+  CANCELLED
+  SKIPPED
+}
+
+"""Category of a Destination connector."""
+enum DestinationType {
+  CRM
+  MARKETING_AUTOMATION
+  ADVERTISING
+  CUSTOMER_SUCCESS
+  PRODUCT_ANALYTICS
+  FINANCE
+  PRODUCTIVITY
+  DATA_WAREHOUSE
+  CUSTOM
+}
+
+"""Category of a DataSource / Warehouse connector."""
+enum WarehouseType {
+  SNOWFLAKE
+  BIGQUERY
+  DATABRICKS
+  REDSHIFT
+  POSTGRES
+  MYSQL
+  CLICKHOUSE
+  DUCKDB
+  CUSTOM
+}
+
+"""How the source model is defined."""
+enum SourceModelType {
+  SQL
+  DBT
+  LOOKER
+  TABLE
+  SEGMENT
+}
+
+"""How a single field mapping is resolved."""
+enum MappingType {
+  FIELD
+  CONSTANT
+  FORMULA
+  FUNCTION
+}
+
+"""Defines upsert / append / mirror behavior for the sync."""
+enum BehaviorMapping {
+  UPSERT
+  MIRROR
+  APPEND
+  UPDATE
+  CREATE
+  DELETE
+}
+
+"""Status returned after a ConnectionTest."""
+enum ConnectionTestStatus {
+  SUCCESS
+  FAILURE
+  PENDING
+}
+
+"""Column data classification."""
+enum ColumnType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  DATETIME
+  ARRAY
+  OBJECT
+  NULL
+  UNKNOWN
+}
+
+"""Outcome for an individual Record in a SyncRun."""
+enum RecordStatus {
+  SYNCED
+  REJECTED
+  SKIPPED
+  FAILED
+}
+
+"""Category of an Operation within a SyncRun."""
+enum OperationType {
+  INSERT
+  UPDATE
+  DELETE
+  UPSERT
+}
+
+"""Events that can trigger a Webhook."""
+enum WebhookEvent {
+  SYNC_RUN_COMPLETED
+  SYNC_RUN_FAILED
+  SYNC_RUN_STARTED
+  SYNC_PAUSED
+  CONNECTION_FAILED
+  SEGMENT_UPDATED
+}
+
+# ─── Sync Types ────────────────────────────────────────────────────────────────
+
+"""Top-level representation of a Census reverse ETL sync pipeline."""
+type Sync {
+  id: ID!
+  name: String!
+  status: SyncStatus!
+  syncType: SyncType!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  lastRunAt: DateTime
+  nextRunAt: DateTime
+  sourceModel: SourceModel
+  destination: Destination
+  destinationObject: DestinationObject
+  mappings: [Mapping!]
+  runs: [SyncRun!]
+  details: SyncDetails
+}
+
+"""Extended configuration and statistics for a Sync."""
+type SyncDetails {
+  id: ID!
+  schedule: String
+  cronExpression: String
+  fullSyncEnabled: Boolean
+  paused: Boolean
+  primaryIdentifier: String
+  behaviorMapping: BehaviorMapping
+  sourceFilters: JSON
+  destinationFilters: JSON
+  alertThreshold: Int
+  tags: [String!]
+}
+
+# ─── SyncRun Types ─────────────────────────────────────────────────────────────
+
+"""A single execution of a Sync pipeline."""
+type SyncRun {
+  id: ID!
+  syncId: ID!
+  status: SyncRunStatus!
+  startedAt: DateTime!
+  completedAt: DateTime
+  recordsProcessed: Int
+  recordsSynced: Int
+  recordsFailed: Int
+  recordsSkipped: Int
+  fullSync: Boolean
+  triggeredBy: String
+  details: SyncRunDetails
+  errors: [SyncRunError!]
+  operations: [Operation!]
+}
+
+"""Extended metadata for a SyncRun."""
+type SyncRunDetails {
+  id: ID!
+  sourceRecordCount: Int
+  destinationRecordCount: Int
+  durationSeconds: Int
+  bytesProcessed: Int
+  queryExecutionMs: Int
+  apiCallCount: Int
+  rateLimitHits: Int
+  logs: [String!]
+}
+
+"""An error raised during a SyncRun."""
+type SyncRunError {
+  id: ID!
+  syncRunId: ID!
+  message: String!
+  code: String
+  field: String
+  recordId: String
+  severity: String
+  occurredAt: DateTime
+}
+
+# ─── Destination Types ─────────────────────────────────────────────────────────
+
+"""A connected SaaS destination that Census can write data into."""
+type Destination {
+  id: ID!
+  name: String!
+  type: DestinationType!
+  connectorName: String!
+  status: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  details: DestinationDetails
+  objects: [DestinationObject!]
+  syncs: [Sync!]
+}
+
+"""Extended configuration and credential metadata for a Destination."""
+type DestinationDetails {
+  id: ID!
+  connectionStatus: String
+  oauthEnabled: Boolean
+  apiVersion: String
+  region: String
+  instanceUrl: String
+  customFields: JSON
+  lastTestedAt: DateTime
+}
+
+"""An addressable object within a Destination (e.g. Contact, Account, Lead)."""
+type DestinationObject {
+  id: ID!
+  destinationId: ID!
+  name: String!
+  label: String
+  supportsUpsert: Boolean
+  supportsDelete: Boolean
+  supportsInsert: Boolean
+  fields: [DestinationField!]
+}
+
+"""A single field on a DestinationObject."""
+type DestinationField {
+  id: ID!
+  destinationObjectId: ID!
+  name: String!
+  label: String
+  type: String
+  required: Boolean
+  canBeIdentifier: Boolean
+  canBeUpdated: Boolean
+  isCustom: Boolean
+}
+
+# ─── Source / Warehouse Types ──────────────────────────────────────────────────
+
+"""A connected data source (warehouse, database, or lake)."""
+type DataSource {
+  id: ID!
+  name: String!
+  type: WarehouseType!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  details: DataSourceDetails
+  warehouse: Warehouse
+  models: [SourceModel!]
+  schemas: [Schema!]
+}
+
+"""Extended connection metadata for a DataSource."""
+type DataSourceDetails {
+  id: ID!
+  host: String
+  port: Int
+  database: String
+  schema: String
+  region: String
+  project: String
+  catalog: String
+  connectionString: String
+  sslEnabled: Boolean
+  lastTestedAt: DateTime
+}
+
+"""Warehouse-level abstraction over a DataSource."""
+type Warehouse {
+  id: ID!
+  name: String!
+  type: WarehouseType!
+  createdAt: DateTime!
+  details: WarehouseDetails
+  sources: [DataSource!]
+}
+
+"""Extended properties of a Warehouse connection."""
+type WarehouseDetails {
+  id: ID!
+  accountIdentifier: String
+  role: String
+  warehouse: String
+  clusterId: String
+  httpPath: String
+  projectId: String
+  dataset: String
+  credentialType: String
+}
+
+# ─── Source Model Types ────────────────────────────────────────────────────────
+
+"""A model or query that produces the dataset for a Sync."""
+type SourceModel {
+  id: ID!
+  name: String!
+  type: SourceModelType!
+  dataSourceId: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  details: SourceModelDetails
+  columns: [Column!]
+  syncs: [Sync!]
+}
+
+"""Extended metadata for a SourceModel."""
+type SourceModelDetails {
+  id: ID!
+  previewEnabled: Boolean
+  lastPreviewAt: DateTime
+  rowCount: Int
+  estimatedBytes: Int
+  compiledSql: String
+  tags: [String!]
+}
+
+"""A raw SQL query used as a SourceModel."""
+type SQL {
+  id: ID!
+  sourceModelId: ID!
+  query: SQLQuery!
+}
+
+"""The SQL query text and execution metadata."""
+type SQLQuery {
+  id: ID!
+  text: String!
+  dialect: String
+  compiledAt: DateTime
+  isValid: Boolean
+  validationError: String
+}
+
+"""A dbt project integration on a DataSource."""
+type DBT {
+  id: ID!
+  dataSourceId: ID!
+  projectName: String
+  gitUrl: String
+  branch: String
+  models: [DBTModel!]
+}
+
+"""A single dbt model available as a SourceModel."""
+type DBTModel {
+  id: ID!
+  dbtId: ID!
+  name: String!
+  uniqueId: String
+  description: String
+  schema: String
+  materializedAs: String
+  tags: [String!]
+}
+
+"""A Looker Look exposed as a SourceModel."""
+type LookerLook {
+  id: ID!
+  sourceModelId: ID!
+  lookId: String!
+  title: String
+  spaceId: String
+  modelName: String
+  viewName: String
+}
+
+# ─── Mapping Types ─────────────────────────────────────────────────────────────
+
+"""The field mapping configuration for a Sync."""
+type Mapping {
+  id: ID!
+  syncId: ID!
+  sourceField: MappingField
+  destinationField: MappingField
+  mappingType: MappingType!
+  behaviorMapping: BehaviorMapping
+  isIdentifier: Boolean
+  details: MappingDetails
+}
+
+"""Extended properties of a Mapping."""
+type MappingDetails {
+  id: ID!
+  constantValue: JSON
+  formula: String
+  functionName: String
+  functionArgs: JSON
+  transformEnabled: Boolean
+  transformExpression: String
+}
+
+"""A field reference used in a Mapping (source or destination side)."""
+type MappingField {
+  id: ID!
+  name: String!
+  label: String
+  dataType: String
+  isRequired: Boolean
+}
+
+# ─── Operation and Record Types ────────────────────────────────────────────────
+
+"""An individual write operation issued to a destination during a SyncRun."""
+type Operation {
+  id: ID!
+  syncRunId: ID!
+  operationType: OperationType!
+  recordCount: Int
+  succeededCount: Int
+  failedCount: Int
+  executedAt: DateTime
+  details: [Record!]
+}
+
+"""A single data record processed during a SyncRun."""
+type Record {
+  id: ID!
+  operationId: ID!
+  status: RecordStatus!
+  sourceIdentifier: JSON
+  destinationIdentifier: JSON
+  errorMessage: String
+  details: RecordDetails
+}
+
+"""Extended payload detail for a Record."""
+type RecordDetails {
+  id: ID!
+  sourcePayload: JSON
+  destinationPayload: JSON
+  diffPayload: JSON
+  rejectionReason: String
+  processedAt: DateTime
+}
+
+# ─── Segment Types ─────────────────────────────────────────────────────────────
+
+"""An audience segment built in the Census Audience Hub."""
+type Segment {
+  id: ID!
+  name: String!
+  dataSourceId: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  recordCount: Int
+  details: SegmentDetails
+  syncs: [Sync!]
+}
+
+"""Extended definition of a Segment, including filter conditions."""
+type SegmentDetails {
+  id: ID!
+  description: String
+  filterLogic: JSON
+  baseModel: SourceModel
+  lastComputedAt: DateTime
+  isReady: Boolean
+  tags: [String!]
+}
+
+# ─── Connection Types ──────────────────────────────────────────────────────────
+
+"""A credential set used to authenticate a DataSource or Destination."""
+type Connection {
+  id: ID!
+  name: String!
+  connectorType: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  details: ConnectionDetails
+  testResult: ConnectionTest
+}
+
+"""Credential and configuration detail for a Connection."""
+type ConnectionDetails {
+  id: ID!
+  authType: String
+  oauthScopes: [String!]
+  credentialFields: JSON
+  encryptionEnabled: Boolean
+  proxyEnabled: Boolean
+  ipWhitelistRequired: Boolean
+}
+
+"""Result of running a connectivity test on a Connection."""
+type ConnectionTest {
+  id: ID!
+  connectionId: ID!
+  status: ConnectionTestStatus!
+  message: String
+  testedAt: DateTime!
+  latencyMs: Int
+  warnings: [String!]
+}
+
+# ─── Schema Discovery Types ────────────────────────────────────────────────────
+
+"""A logical schema namespace within a DataSource (e.g. Snowflake schema)."""
+type Schema {
+  id: ID!
+  dataSourceId: ID!
+  name: String!
+  details: SchemaDetails
+  tables: [Table!]
+}
+
+"""Metadata describing a Schema namespace."""
+type SchemaDetails {
+  id: ID!
+  database: String
+  catalog: String
+  tableCount: Int
+  lastRefreshedAt: DateTime
+}
+
+"""A table or view within a Schema."""
+type Table {
+  id: ID!
+  schemaId: ID!
+  name: String!
+  isView: Boolean
+  rowCount: Int
+  sizeBytes: Int
+  columns: [Column!]
+}
+
+"""A column within a Table."""
+type Column {
+  id: ID!
+  tableId: ID!
+  name: String!
+  type: ColumnType!
+  isNullable: Boolean
+  isPrimaryKey: Boolean
+  defaultValue: String
+  description: String
+}
+
+# ─── Field and Object Types ────────────────────────────────────────────────────
+
+"""A generic field abstraction used across source and destination contexts."""
+type Field {
+  id: ID!
+  name: String!
+  label: String
+  dataType: String
+  isRequired: Boolean
+  isArray: Boolean
+  details: FieldDetails
+}
+
+"""Extended properties of a Field."""
+type FieldDetails {
+  id: ID!
+  description: String
+  exampleValue: JSON
+  allowedValues: [String!]
+  isDeprecated: Boolean
+  deprecationReason: String
+}
+
+"""A generic object abstraction (source table, destination record type, etc.)."""
+type Object {
+  id: ID!
+  name: String!
+  label: String
+  connectorType: String
+  fields: [Field!]
+  details: ObjectDetails
+}
+
+"""Extended properties of an Object."""
+type ObjectDetails {
+  id: ID!
+  description: String
+  supportsCreate: Boolean
+  supportsUpdate: Boolean
+  supportsDelete: Boolean
+  supportsQuery: Boolean
+  isCustom: Boolean
+  apiName: String
+}
+
+# ─── Auth Types ────────────────────────────────────────────────────────────────
+
+"""A workspace-scoped API key for Census or Fivetran Activations."""
+type APIKey {
+  id: ID!
+  name: String!
+  prefix: String!
+  createdAt: DateTime!
+  lastUsedAt: DateTime
+  expiresAt: DateTime
+  scopes: [String!]
+  isActive: Boolean!
+}
+
+"""A short-lived auth token (e.g. Connect Link token)."""
+type Token {
+  id: ID!
+  value: String!
+  expiresAt: DateTime!
+  scopes: [String!]
+  connectLinkId: String
+  workspaceId: String
+}
+
+# ─── Webhook Types ─────────────────────────────────────────────────────────────
+
+"""A registered webhook endpoint for Census event notifications."""
+type Webhook {
+  id: ID!
+  name: String!
+  url: String!
+  events: [WebhookEvent!]!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  secret: String
+  lastTriggeredAt: DateTime
+}
+
+"""A webhook event delivery record."""
+type WebhookEvent {
+  id: ID!
+  webhookId: ID!
+  event: WebhookEvent!
+  payload: JSON
+  deliveredAt: DateTime
+  responseStatus: Int
+  responseBody: String
+  success: Boolean
+}
+
+# ─── Query Root ────────────────────────────────────────────────────────────────
+
+type Query {
+  """List all Syncs in the workspace."""
+  syncs(status: SyncStatus, limit: Int, offset: Int): [Sync!]!
+
+  """Fetch a single Sync by ID."""
+  sync(id: ID!): Sync
+
+  """List SyncRuns for a given Sync."""
+  syncRuns(syncId: ID!, status: SyncRunStatus, limit: Int, offset: Int): [SyncRun!]!
+
+  """Fetch a single SyncRun by ID."""
+  syncRun(id: ID!): SyncRun
+
+  """List all connected Destinations."""
+  destinations(type: DestinationType, limit: Int, offset: Int): [Destination!]!
+
+  """Fetch a single Destination by ID."""
+  destination(id: ID!): Destination
+
+  """List objects available in a Destination."""
+  destinationObjects(destinationId: ID!): [DestinationObject!]!
+
+  """List fields on a DestinationObject."""
+  destinationFields(destinationObjectId: ID!): [DestinationField!]!
+
+  """List all connected DataSources."""
+  dataSources(type: WarehouseType, limit: Int, offset: Int): [DataSource!]!
+
+  """Fetch a single DataSource by ID."""
+  dataSource(id: ID!): DataSource
+
+  """List Warehouses."""
+  warehouses: [Warehouse!]!
+
+  """Fetch a single Warehouse by ID."""
+  warehouse(id: ID!): Warehouse
+
+  """List SourceModels for a DataSource."""
+  sourceModels(dataSourceId: ID!, type: SourceModelType, limit: Int, offset: Int): [SourceModel!]!
+
+  """Fetch a single SourceModel by ID."""
+  sourceModel(id: ID!): SourceModel
+
+  """List Mappings for a Sync."""
+  mappings(syncId: ID!): [Mapping!]!
+
+  """Fetch a single Mapping by ID."""
+  mapping(id: ID!): Mapping
+
+  """List Segments in the workspace."""
+  segments(dataSourceId: ID, limit: Int, offset: Int): [Segment!]!
+
+  """Fetch a single Segment by ID."""
+  segment(id: ID!): Segment
+
+  """List Connections."""
+  connections: [Connection!]!
+
+  """Fetch a single Connection by ID."""
+  connection(id: ID!): Connection
+
+  """Test a Connection."""
+  connectionTest(connectionId: ID!): ConnectionTest
+
+  """List schemas within a DataSource."""
+  schemas(dataSourceId: ID!): [Schema!]!
+
+  """List tables within a Schema."""
+  tables(schemaId: ID!): [Table!]!
+
+  """List columns within a Table."""
+  columns(tableId: ID!): [Column!]!
+
+  """List API keys for the workspace."""
+  apiKeys: [APIKey!]!
+
+  """Fetch a single API key by ID."""
+  apiKey(id: ID!): APIKey
+
+  """List registered Webhooks."""
+  webhooks: [Webhook!]!
+
+  """Fetch a single Webhook by ID."""
+  webhook(id: ID!): Webhook
+
+  """List recent WebhookEvent deliveries for a webhook."""
+  webhookEvents(webhookId: ID!, limit: Int, offset: Int): [WebhookEvent!]!
+}
+
+# ─── Mutation Root ─────────────────────────────────────────────────────────────
+
+type Mutation {
+  """Create a new Sync."""
+  createSync(
+    name: String!
+    sourceModelId: ID!
+    destinationId: ID!
+    destinationObjectId: ID!
+    behaviorMapping: BehaviorMapping!
+    syncType: SyncType
+    schedule: String
+  ): Sync
+
+  """Update an existing Sync."""
+  updateSync(
+    id: ID!
+    name: String
+    schedule: String
+    syncType: SyncType
+    behaviorMapping: BehaviorMapping
+    paused: Boolean
+  ): Sync
+
+  """Delete a Sync."""
+  deleteSync(id: ID!): Boolean
+
+  """Trigger a manual SyncRun."""
+  triggerSync(id: ID!, fullSync: Boolean): SyncRun
+
+  """Cancel a running SyncRun."""
+  cancelSyncRun(id: ID!): SyncRun
+
+  """Create a new Destination connection."""
+  createDestination(
+    name: String!
+    connectorType: String!
+    credentials: JSON!
+  ): Destination
+
+  """Update a Destination."""
+  updateDestination(id: ID!, name: String, credentials: JSON): Destination
+
+  """Delete a Destination."""
+  deleteDestination(id: ID!): Boolean
+
+  """Create a new DataSource / Warehouse connection."""
+  createDataSource(
+    name: String!
+    type: WarehouseType!
+    connectionDetails: JSON!
+  ): DataSource
+
+  """Update a DataSource."""
+  updateDataSource(id: ID!, name: String, connectionDetails: JSON): DataSource
+
+  """Delete a DataSource."""
+  deleteDataSource(id: ID!): Boolean
+
+  """Create a SQL-based SourceModel."""
+  createSQLModel(
+    dataSourceId: ID!
+    name: String!
+    sqlQuery: String!
+  ): SourceModel
+
+  """Update a SourceModel."""
+  updateSourceModel(id: ID!, name: String, sqlQuery: String): SourceModel
+
+  """Delete a SourceModel."""
+  deleteSourceModel(id: ID!): Boolean
+
+  """Add a Mapping to a Sync."""
+  createMapping(
+    syncId: ID!
+    sourceFieldName: String!
+    destinationFieldName: String!
+    mappingType: MappingType!
+    isIdentifier: Boolean
+    constantValue: JSON
+  ): Mapping
+
+  """Update a Mapping."""
+  updateMapping(
+    id: ID!
+    sourceFieldName: String
+    destinationFieldName: String
+    mappingType: MappingType
+    isIdentifier: Boolean
+    constantValue: JSON
+  ): Mapping
+
+  """Delete a Mapping."""
+  deleteMapping(id: ID!): Boolean
+
+  """Create a Segment."""
+  createSegment(
+    name: String!
+    dataSourceId: ID!
+    filterLogic: JSON!
+    baseModelId: ID
+  ): Segment
+
+  """Update a Segment."""
+  updateSegment(id: ID!, name: String, filterLogic: JSON): Segment
+
+  """Delete a Segment."""
+  deleteSegment(id: ID!): Boolean
+
+  """Create an API key."""
+  createAPIKey(name: String!, scopes: [String!], expiresAt: DateTime): APIKey
+
+  """Revoke an API key."""
+  revokeAPIKey(id: ID!): Boolean
+
+  """Create a Webhook."""
+  createWebhook(
+    name: String!
+    url: String!
+    events: [WebhookEvent!]!
+    secret: String
+  ): Webhook
+
+  """Update a Webhook."""
+  updateWebhook(id: ID!, name: String, url: String, events: [WebhookEvent!], isActive: Boolean): Webhook
+
+  """Delete a Webhook."""
+  deleteWebhook(id: ID!): Boolean
+}
