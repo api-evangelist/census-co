@@ -59,7 +59,7 @@ apis:
     url: https://fivetran.com/docs/activations/rest-api
   - type: Activations
     url: https://www.getcensus.com/reverse-etl
-  - type: SignUp
+  - type: Signup
     url: https://www.getcensus.com/
   - url: graphql/census-co-graphql.md
     type: GraphQL
@@ -202,7 +202,7 @@ common:
   url: https://developers.getcensus.com/
 - type: Activations
   url: https://fivetran.com/docs/activations
-- type: SignUp
+- type: Signup
   url: https://www.getcensus.com/
 maintainers:
 - FN: Kin Lane
