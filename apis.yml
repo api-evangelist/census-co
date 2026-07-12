@@ -196,6 +196,10 @@ apis:
   - type: API Key
     description: API key used by the host application to mint and manage Connect Links.
 common:
+- type: TrustCenter
+  url: security/census-co-trust-center.yml
+- type: DomainSecurity
+  url: security/census-co-domain-security.yml
 - type: Website
   url: https://www.getcensus.com/
 - type: Documentation
